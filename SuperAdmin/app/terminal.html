@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal</title>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    form {
+      max-width: 400px;
+      margin: 20px auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(90%);
+    }
+
+    button.logout {
+      background-color: #ff5555; /* Red color for Logout button */
+      color: #fff;
+    }
+
+    button.delete {
+      background-color: #ff5555; /* Red color for Delete button */
+      color: #fff;
+    }
+
+    button.promote {
+      background-color: #4caf50; /* Green color for Promote button */
+      color: #fff;
+      margin: 1rem;
+    }
+
+    #memberList {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #4caf50;
+      color: #fff;
+    }
+
+    #selfUserInfo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+
+  <script>
+    function parseJwt(token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        return decoded;
+      } catch (error) {
+        console.error('Error parsing JWT token:', error);
+        return null;
+      }
+    }
+
+    let email;
+    const authToken = localStorage.getItem('token');
+    const decodedToken = parseJwt(authToken);
+    const loggedInEmailId = decodedToken ? decodedToken.emailId : null;
+    console.log('Logged-in User ID:', loggedInEmailId);  
+
+    fetch('odata/v4/terminal/Terminal')
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.value);
+
+        const selfIndex = data.value.findIndex(user => user.email === loggedInEmailId);
+        console.log(selfIndex);
+        const loggedInUser = data.value.find(user => user.email === loggedInEmailId);
+        const loggedInUserRole = loggedInUser.role;
+        console.log(loggedInUserRole);
+        const memberList = document.getElementById('memberList');
+        displaySelf(data.value[selfIndex]);
+        const logoutButton = createButton('Logout', () => {
+          localStorage.removeItem('token');
+          window.location.href = './userlogin.html';
+        });
+        document.getElementById('selfUserInfo').appendChild(logoutButton);
+
+        const otherUsers = data.value.filter((user, index) => index !== selfIndex);
+        console.log(otherUsers);
+         otherUsers.forEach(user => {
+          console.log(user);
+          const userElement = createUserElement(user);
+
+          if (loggedInUserRole === 'Leader') {
+           
+            if (user.role === 'Member') {
+              const deleteButton = createButton('Delete', () => {
+                email = user.email;
+                deleteMember(user.email);
+              });
+              userElement.appendChild(deleteButton);
+
+              const promoteButton = createButton('Promote to Co-Leader', () => {
+                email = user.email;
+                promoteToCoLeader(user.email);
+              });
+              userElement.appendChild(promoteButton);
+            } else {
+              const deleteButton = createButton('Delete', () => {
+                email = user.email;
+                deleteMember(user.email);
+              });
+              userElement.appendChild(deleteButton);
+            }
+          } else if (loggedInUserRole === 'co-leader') {
+            if (user.role === 'Member') {
+              const deleteButton = createButton('Delete', () => {
+                email = user.email;
+                deleteMember(user.email);
+              });
+              userElement.appendChild(deleteButton);
+
+              const promoteButton = createButton('Promote to Co-Leader', () => {
+                email = user.email;
+                promoteToCoLeader(user.email);
+              });
+              userElement.appendChild(promoteButton);
+            }
+          }
+
+          memberList.appendChild(userElement);
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching user data:', error);
+        
+      });
+
+    function displaySelf(selfUser) {
+      const selfElement = createUserElement(selfUser);
+      document.getElementById('selfUserInfo').appendChild(selfElement);
+    }
+    function createUserElement(user) {
+      const userElement = document.createElement('div');
+      userElement.innerHTML = `
+        <ul>
+          <li>Name: ${user.username}</li>
+          <li>Email: ${user.email}</li>
+          <li>Role: ${user.role}</li>
+        </ul>
+      `;
+      return userElement;
+    }
+
+   
+    function createButton(text, clickHandler) {
+      const button = document.createElement('button');
+      button.textContent = text;
+      button.addEventListener('click', clickHandler);
+      if (text === 'Logout') {
+        button.className = 'logout';
+      } else if (text === 'Delete') {
+        button.className = 'delete';
+      } else if (text === 'Promote to Co-Leader') {
+        button.className = 'promote';
+      }
+      return button;
+    }
+
+    function deleteMember(email) {
+      fetch(`/odata/v4/delete/Delete('${email}')`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('User deleted successfully:', data);
+        })
+        .catch(error => {
+          console.error('Error deleting user:', error);
+        });
+    }
+
+    function promoteToCoLeader(email) {
+      fetch(`/odata/v4/promote/Promote('${email}')`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          role: 'co-leader'
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('User promoted to Co-Leader successfully:', data);
+        })
+        .catch(error => {
+          console.error('Error promoting user:', error);
+        });
+    }
+  </script>
+</head>
+<body>
+ 
+  <div id="selfUserInfo"></div>
+ 
+  <div id="memberList"></div>
+</body>
+</html>
