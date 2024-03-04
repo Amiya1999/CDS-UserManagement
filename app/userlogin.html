@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login Page</title>
+</head>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  h1 {
+    color: #333;
+  }
+
+  form {
+    max-width: 400px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+  }
+
+  input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 16px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  button {
+    background-color: #4caf50;
+    color: #fff;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #45a049;
+  }
+
+  button,
+  form {
+    display: block;
+    margin: 10px auto;
+  }
+
+  button + button {
+    margin-top: 10px;
+  }
+</style>
+<body>
+  <h1>Login Page</h1>
+  <form id="userLoginForm">
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" name="email" required><br><br>
+
+    <label for="password">Password:</label><br>
+    <input type="password" id="password" name="password" required><br><br>
+
+    <button type="submit">Login</button>
+  </form>
+  <button onclick="goToRegistration()">Not a Registered User? Register Here</button>
+  <button onclick="setToken()">Set Token</button>
+  <script>
+    function goToRegistration() {
+      window.location.href = 'userregistration.html';
+    }
+
+    const form = document.getElementById('userLoginForm');
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  const logindata = {
+    email: form.email.value,
+    password: form.password.value
+  };
+
+  fetch('/odata/v4/login/LoginUser', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(logindata)
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to login');
+  })
+  .then(responseData => {
+    const token = responseData.token;
+    localStorage.setItem('token', token);
+    // window.location.href='terminal1.html';
+    console.log('User Logged in Successfully:', responseData);
+ 
+  })
+  .catch(error => {
+    console.error('Error logging in:', error);
+    
+  });
+});
+
+function setToken() {
+      fetch('/odata/v4/get-token/Token')
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        localStorage.setItem('token', data.value);
+        console.log('Token set successfully:', data.value);
+         window.location.href='terminal1.html';
+        
+      })
+      .catch(error => {
+        console.error('Error setting token:', error);
+        
+      });
+}
+  </script>
+</body>
+</html>
